@@ -1,0 +1,83 @@
+"0","# Loading all popular libraries - if additional libraries are needed, they will be loaded on an ad-hoc basis within the appropriate script"
+"0","source(here::here('r', 'Libraries.R'))"
+"2","
+Attaching package: ‘dplyr’
+
+"
+"2","The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"
+"2","here() starts at /Users/mikekraft13/Downloads/Mike's Playground/regseason-win-pct-study
+"
+"2","
+Attaching package: ‘scales’
+
+"
+"2","The following object is masked from ‘package:readr’:
+
+    col_factor
+
+"
+"2","The following object is masked from ‘package:purrr’:
+
+    discard
+
+"
+"2","Registered S3 methods overwritten by 'htmltools':
+  method               from         
+  print.html           tools:rstudio
+  print.shiny.tag      tools:rstudio
+  print.shiny.tag.list tools:rstudio
+"
+"2","Registered S3 method overwritten by 'htmlwidgets':
+  method           from         
+  print.htmlwidget tools:rstudio
+"
+"2","
+Attaching package: ‘gridExtra’
+
+"
+"2","The following object is masked from ‘package:dplyr’:
+
+    combine
+
+"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"
+"2","[30m── [1mAttaching packages[22m ─────────────────────────────────────────────────────────────────────── tidymodels 1.2.0 ──[39m
+"
+"2","[30m[32m✔[30m [34mbroom       [30m 1.0.7     [32m✔[30m [34mtibble      [30m 3.2.1
+[32m✔[30m [34mdials       [30m 1.3.0     [32m✔[30m [34mtune        [30m 1.2.1
+[32m✔[30m [34mmodeldata   [30m 1.4.0     [32m✔[30m [34mworkflows   [30m 1.1.4
+[32m✔[30m [34mparsnip     [30m 1.2.1     [32m✔[30m [34mworkflowsets[30m 1.1.0
+[32m✔[30m [34mrecipes     [30m 1.1.0     [32m✔[30m [34myardstick   [30m 1.3.1
+[32m✔[30m [34mrsample     [30m 1.2.1     [39m
+"
+"2","[30m── [1mConflicts[22m ────────────────────────────────────────────────────────────────────────── tidymodels_conflicts() ──
+[31m✖[30m [34mgridExtra[30m::[32mcombine()[30m masks [34mdplyr[30m::combine()
+[31m✖[30m [34mscales[30m::[32mdiscard()[30m    masks [34mpurrr[30m::discard()
+[31m✖[30m [34mdplyr[30m::[32mfilter()[30m      masks [34mstats[30m::filter()
+[31m✖[30m [34mrecipes[30m::[32mfixed()[30m     masks [34mstringr[30m::fixed()
+[31m✖[30m [34mdplyr[30m::[32mlag()[30m         masks [34mstats[30m::lag()
+[31m✖[30m [34myardstick[30m::[32mspec()[30m    masks [34mreadr[30m::spec()
+[31m✖[30m [34mrecipes[30m::[32mstep()[30m      masks [34mstats[30m::step()
+[34m•[30m Use suppressPackageStartupMessages() to eliminate package startup messages[39m
+"
+"2","
+Attaching package: ‘rvest’
+
+"
+"2","The following object is masked from ‘package:readr’:
+
+    guess_encoding
+
+"

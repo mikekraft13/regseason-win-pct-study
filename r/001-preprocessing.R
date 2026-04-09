@@ -1,0 +1,66 @@
+
+# prep & load scraped data from baseball reference ####
+data_file_path <- here::here('data', 'mlb_team_stats_2014_2025.xlsx')
+sheet_names <- excel_sheets(data_file_path)
+## read in each tab, and name it properly ####
+excel_data <- set_names(map(sheet_names, ~ read_excel(data_file_path, sheet = .)), paste0(sheet_names, '_team_stats'))
+
+
+# Prep for regression and other ML techniques
+combined_df <- bind_rows(excel_data)
+
+# filtering out: character fields (team), league totals, league averages (they have no win.pct), and rank fields
+cor_df <- combined_df |> select (-c(Team, dplyr::ends_with('rank'))) |> filter(!is.na(win.pct))
+
+# correlation plot for initial data set
+corr <- cor(cor_df, use = "complete.obs")
+
+ggcorrplot::ggcorrplot(corr, 
+           hc.order = TRUE, 
+           type = "lower",
+           lab = TRUE,
+           lab_size = ,
+           outline.color = "white")
+
+# based upon the correlation coefficient matrix, removing collinear fields
+## filtering down variables that have an absolute correlation of >= 0.5
+idx <- which(abs(corr) >= 0.5, arr.ind = TRUE)
+high_corrs <- data.frame(
+  var1 = rownames(corr)[idx[, 1]],
+  var2 = colnames(corr)[idx[, 2]],
+  correlation = corr[idx]
+)
+
+# collinear_vars <- high_corrs |>
+#   filter(var1 == "win.pct" | var2 == "win.pct")
+
+
+## removing OPS and OPS+ since they are derived from SLG and OBP. ####
+## removing OBP since we have all variables that make up this calculation (1B, 2B, 3B, HR, BB, HBP, AB, SF)
+## removing "#Bat" since I'm not sure what this field represents ####
+## removing TB since it's a linear calculation of 1B, 2B, 3B, HR => TB = (1x1B)+(2x2B)+(3x3B)+(4x4B) ####
+prepped_df <- cor_df |> 
+  select(-c(OPS, `OPS+`, `#Bat`, TB)) |>
+  # adding an Id field so records can be uniquely identified later on
+  mutate(Id = row_number(),
+         `1B` = (H - (`2B`+`3B`+HR)),
+         year = as.character(year)) |>
+  relocate(Id, .before = year) |>
+  relocate(`1B`, .before = `2B`) |>
+  ## removing the hits field since it is now made up of 1B+2B+3B+HR
+  select(-H)
+
+# parsing training and testing data ####
+## setting randomness seed #####
+set.seed(123)
+
+if (need.new.training.testing.data){
+  initial_split <- initial_split(prepped_df, prop = 3/4)
+  training_data <- training(initial_split)
+  test_data <- testing(initial_split)
+  training_data |> saveRDS(here::here('rds', 'training_data.rds'))
+  test_data |> saveRDS(here::here('rds', 'test_data.rds'))
+}else{
+  training_data <- readRDS(here::here('rds', 'training_data.rds'))
+  test_data <- readRDS(here::here('rds', 'test_data.rds'))
+}

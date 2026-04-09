@@ -1,0 +1,2 @@
+"0","# lambda parameter expands the x-axis on the graph"
+"0","MASS::boxcox(lin_reg_model1, lambda = seq(-2, 4))"

@@ -1,0 +1,1 @@
+A look at MLB regular season win percentage and how well 2 different machine learning models can predict it, using traditional offensive metrics.

@@ -1,0 +1,7 @@
+"0","# plot for Cv error vs test error"
+"0","ggplot2::ggplot(test_data, aes(x = win.pct, y = randforest_preds)) +"
+"0","  geom_point() +"
+"0","  labs(x = ""Actual Win %"","
+"0","     y = ""Predicted Win %"","
+"0","     title = ""Predicted vs Actual Win Percentage - Random forest model"") +"
+"0","  geom_abline(intercept = 0, slope = 1)"

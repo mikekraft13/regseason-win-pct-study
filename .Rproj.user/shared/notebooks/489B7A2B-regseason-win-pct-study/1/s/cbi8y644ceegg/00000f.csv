@@ -1,0 +1,4 @@
+"0","# this script takes the raw data and preps it for modeling"
+"0","# if, for whatever reason we need a new training and testing data set split"
+"0","need.new.training.testing.data <- F"
+"0","source(here::here('r', '001-preprocessing.R'))"

@@ -1,0 +1,233 @@
+<!-- --- -->
+<!-- title: "regseason-win-pct-study" -->
+<!-- format: pdf -->
+<!-- --- -->
+
+Question aiming study: Can traditional offensive metrics effectively predict regular season team success in MLB?
+
+This study evaluates whether widely understood offensive statistics can be used to accurately predict team win percentage, without relying on advanced or proprietary metrics.
+
+```{r, echo=FALSE}
+# Loading all popular libraries - if additional libraries are needed, they will be loaded on an ad-hoc basis within the appropriate script
+source(here::here('r', 'Libraries.R'))
+```
+
+```{r}
+# this script takes the raw data and preps it for modeling
+# if, for whatever reason we need a new training and testing data set split
+need.new.training.testing.data <- F
+source(here::here('r', '001-preprocessing.R'))
+```
+# First model - Linear Regression
+# Summary statistics
+```{r}
+lin_reg_model1 <- lm(win.pct ~ (.-year -Id),data=training_data)
+
+summary(lin_reg_model1)
+```
+
+# Residual diagnostics
+```{r}
+par(mfrow=c(2,2))
+plot(lin_reg_model1)
+```
+The residuals seem to be pretty normalized, but we will test them just to be safe.
+
+# Confirmation on normality
+```{r}
+# lambda parameter expands the x-axis on the graph
+MASS::boxcox(lin_reg_model1, lambda = seq(-2, 4))
+```
+Since the boxcox plot is yielding a lambda value between 1 and 2, we will test to see if the strength of our model increases if we were to treat lambda = 2 (response squared transformation). We have already tested our model for when lambda = 1 (no transformation on the response variable).
+
+# Linear regression model w/ response squared transformation
+```{r}
+lin_reg_model11 <- lm((win.pct^2) ~ (.-year -Id),data=training_data)
+
+summary(lin_reg_model11)
+```
+Since the adjusted R-squared value of this transformed model is 0.5343 and this value of lin_reg_model1 is 0.5345, we will move forward with the initial model as the stronger of the two.
+
+# Initial regression model, removing statistically insignificant predictors (predictors with a p-value > 0.1)
+```{r}
+lin_reg_model2 <- lm(win.pct ~ `R/G`+G+`1B`+SO+BA+GDP+IBB,data=training_data)
+
+summary(lin_reg_model2)
+```
+This model is worse than lin_reg_model1 with respect to Adjusted R-squared. Onto the next model!
+
+# Initial regression model, removing statistically insignificant predictors (predictors with a p-value > 0.1) AND a response squared transformation
+```{r}
+lin_reg_model21 <- lm((win.pct^2) ~ `R/G`+G+`1B`+SO+BA+GDP+IBB,data=training_data)
+
+summary(lin_reg_model21)
+```
+Though this model has an adjusted R-squared value of 0.4878 which is stronger than that of lin_reg_model2, it is still considerably weaker than lin_reg_model1.
+
+# Initial regression model, with more strict removing of statistically insignificant predictors (predictors with a p-value > 0.05)
+```{r}
+lin_reg_model3 <- lm(win.pct ~ `R/G`+G+SO+BA+IBB,data=training_data)
+
+summary(lin_reg_model3)
+```
+With respect to Adjusted R-squared this model is the poorest at predicting our response.
+
+# Initial regression model, with more strict removing of statistically insignificant predictors (predictors with a p-value > 0.05) AND a response squared transformation
+```{r}
+lin_reg_model31 <- lm((win.pct^2) ~ `R/G`+G+SO+BA+IBB,data=training_data)
+
+summary(lin_reg_model31)
+```
+Though this model has a multiple R-squared value of 0.4871 which is stronger than that of lin_reg_model3, it is still considerably weaker than lin_reg_model1.
+
+# Since our initial model with all inputs and no transformation on the response has the strongest Adjusted R-squared value, we will use this version of our linear regression model to perform 10 fold Cross-Validation.
+```{r}
+# calling other libraries here because they cause masking issues when placed in libraries.R script above
+library(glmnet)
+library(gam)
+library(tree)
+library(randomForest)
+library(gbm)
+library(ISLR)
+library(boot)
+library(FNN)
+library(class)
+library(MASS)
+```
+
+```{r}
+set.seed(24)
+glm.fit <- glm(win.pct ~ (.-year -Id),data=training_data)
+cv.errors <- cv.glm(training_data, glm.fit,K = 10) #K-fold K
+lmcvfit <- cv.errors$delta[2]
+lmcvfit
+```
+It can be seen that our Cross-Validation Mean Squared Error = 0.003090097.
+This means that our Root Mean Squared Error = sqrt(0.003090097) = 0.0555886 = 5.6%
+Hence, predictions are typically within about 5.6 percentage points of actual team win percentage, or roughly 9.1 wins (0.056 * 162) over a 162-game season.
+
+# Predictions on our test data
+```{r}
+# predictions on test data
+lin_reg_model1.predictions <- predict(lin_reg_model1,test_data)
+# testing mean squared error
+mse_test <- mean((lin_reg_model1.predictions - test_data$win.pct)^2)
+mse_test
+# root mean squared error
+rmse_test <- sqrt(mse_test)
+rmse_test
+# how much error in terms of games per regular season
+rmse_test * 162
+```
+It can be seen that our Test Mean Squared Error = 0.002734173.
+This means that our Root Mean Squared Error = sqrt(0.002734173) = 0.05228932 = 5.2%
+Hence, predictions are typically within about 5.2 percentage points of actual team win percentage, or roughly 8.4 wins (0.052 * 162) over a 162-game season.
+
+If test error and CV error are similar, then the model generalizes well. If the test error is higher (worse), then the model is overfit to the training data.
+
+Cross-validation helps you build the model.
+The test set helps you trust the model.
+
+# Plot of the predicted win percentage values vs the actual values
+```{r}
+# plot for Cv error vs test error
+ggplot2::ggplot(test_data, aes(x = win.pct, y = lin_reg_model1.predictions)) +
+  geom_point() +
+  labs(x = "Actual Win %",
+     y = "Predicted Win %",
+     title = "Predicted vs Actual Win Percentage - Linear regression model") +
+  geom_abline(intercept = 0, slope = 1)
+
+# looking at biggest misses (errors) in predictions 
+results <- data.frame(
+  actual = test_data$win.pct,
+  predicted = lin_reg_model1.predictions,
+  error = lin_reg_model1.predictions - test_data$win.pct
+)
+
+#head(results[order(abs(results$error), decreasing = TRUE), ])
+```
+
+# Next model - Random Forest
+# Random forest cross validation and search for optimal number of predictors
+```{r}
+library(caret)
+library(randomForest)
+
+set.seed(24)
+
+train_control <- trainControl(
+  method = "cv",
+  number = 5
+)
+
+rf_model <- train(
+  win.pct ~ (.-year -Id),
+  data = training_data,
+  method = "rf",
+  trControl = train_control,
+  ntree = 1000,
+  tuneLength = 5
+)
+
+rf_model
+
+rf_model$results
+```
+We can see after running some 5-fold cross-validation, the mtry value (number of predictors that are randomly selected amongst all 24) with the most optimal (lowest) root mean squared error is 13. Said differently, during our cross-validation it was determined that our random forest model that was best at predicting win percentage was the model in which each individual decision tree of our 1000 trees contained a random grouping of 13 of our 24 total predictor variables. Additionally, our runner-ups with respect to RMSE were 18 variables, followed by all 24, then 7 and 2.
+
+It can be seen that our Cross-Validation Root Mean Squared Error = 0.05750514 = 5.75%
+Hence, predictions are typically within about 5.75 percentage points of actual team win percentage, or roughly 9.3 wins (0.0575 * 162) over a 162-game season.
+
+
+# Checking the node purity of mtry = 13 random forest model
+```{r}
+set.seed(24) 
+# renaming variables that randomForest() is having issues with
+rand_forest_df <- training_data |>
+  rename(R.G = `R/G`, singles = `1B`, doubles = `2B`, triples = `3B`)
+randforest_model <- randomForest(win.pct ~ (.-year -Id), data = rand_forest_df, ntree = 1000, mtry = 13, importance = TRUE)
+
+importance(randforest_model)
+
+varImpPlot(randforest_model)
+```
+Within this Random Forest model, we can see from the Percent Increase in Mean Squared Error (%IncMSE) among our predictors, On Base Percentage (OBP) is our largest value. This means that for a given decision tree within our random forest, as predictor variable combinations are shifting around from tree-to-tree, when the OBP variable is removed from one tree to the next, those 2 trees see the greatest decrease in predictive power than any other change in predictors. Conversely, we can see that the average batter age (BatAge) predictor variable has the smallest %IncMSE value.
+
+Within this Random Forest model, we can see from the Increase in Node Purity (IncNodePurity) among our predictors, On Base Percentage (OBP) is a clear front runner. This means that OBP is the best predictor variable at determining a split in a given decision tree within the random forest model. To come as not much of a surprise, conversely the games played (G) predictor has the smallest increase in node purity. Though it should be noted that the IncNodePurity metric is biased towards 1) continuous variables, and 2) variables with much variance; therefore, this Increase in Node Purity should be viewed with caution with respect to predictive power.
+
+# Predictions on our test data
+```{r}
+y <- test_data |>
+  rename(R.G = `R/G`, singles = `1B`, doubles = `2B`, triples = `3B`)
+randforest_preds <- predict(randforest_model, y)
+randforest_mse <- mean((randforest_preds-y$win.pct)**2)
+randforest_rmse <- sqrt(randforest_mse)
+randforest_rmse
+```
+It can be seen that our Test Root Mean Squared Error = 0.05699896 = 5.7%
+Hence, predictions are typically within about 5.7 percentage points of actual team win percentage, or roughly 9.2 wins (0.057 * 162) over a 162-game season.
+
+# Plot of the predicted win percentage values vs the actual values
+```{r}
+# plot for Cv error vs test error
+ggplot2::ggplot(test_data, aes(x = win.pct, y = randforest_preds)) +
+  geom_point() +
+  labs(x = "Actual Win %",
+     y = "Predicted Win %",
+     title = "Predicted vs Actual Win Percentage - Random forest model") +
+  geom_abline(intercept = 0, slope = 1)
+
+# looking at biggest misses (errors) in predictions 
+results <- data.frame(
+  actual = test_data$win.pct,
+  predicted = randforest_preds,
+  error = randforest_preds - test_data$win.pct
+)
+
+#head(results[order(abs(results$error), decreasing = TRUE), ])
+```
+
+
+Overall, when looking at the predictive power amongst the final linear regression model and our final random forest model, the regression model takes the cake. Although neither of the two models are very strong at predicting regular season win percentage, they weren't too bad either. After various tests and hyperparameter tunings, the linear regression model was, on average, within 5.2% of a team's true regular season win percentage, and the random forest model ended up at 5.7%.
+
